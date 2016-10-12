@@ -12,4 +12,5 @@
 
 Notice that with CSV we specify column numbers instead of names...
 
+cat dc_parking_violations.geojson |node bin/geojson-cubes.js --levels 11,16 --time TICKETISSUEDATE --attr VIOLATIONDESC --out moving
 

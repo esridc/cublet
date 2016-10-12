@@ -5,7 +5,7 @@ var tilePixel = require("tile-pixel"),
   mkdirp = require('mkdirp')
 
 /**
- * Init Cublet with options: 
+ * Init Cublet with options:
  *  - pattern: 'features.*',
  *  - levels: [0, 5]
  *  - outDir: 'out-tile-dir'
@@ -14,7 +14,7 @@ module.exports = function (options) {
   var cublet = new events.EventEmitter()
   var levels = options.levels.split(',') || [0, 5]
   var agg = {},
-    maxTime, minTime
+    maxTime, minTime, valuesArray={}
 
   if (options.append){
     var specFile = options.out+'/spec.json'
@@ -61,14 +61,14 @@ module.exports = function (options) {
           var values = []
 
           for (var time in t.tile[px].values){
-            var epoch = new Date(parseInt(time)).getTime()
+            var epoch = new Date(Date.parse(time)).getTime()
             var date = ~~((epoch-minTime)/(resolutions[options.res]))
-            // Torque style tiles 
+            // Torque style tiles
             times.push(date)
             values.push(t.tile[px].values[time])
 
             // Time based tiles
-            if (options.format === 'time'){ 
+            if (options.format === 'time'){
               if (!pxData[day]){
                 pxData[day] = []
               }
@@ -92,7 +92,7 @@ module.exports = function (options) {
             times.forEach(function (t, i) {
               if (!counts[values[i]]) {
                 counts[values[i]] = 0
-              } 
+              }
               counts[values[i]]++
               total++
             })
@@ -134,13 +134,14 @@ module.exports = function (options) {
 
     q.drain = function(){
       // TODO Save the tile.json spec file w:
-      // min/max time, 
-      // bbox, 
+      // min/max time,
+      // bbox,
       // temporal resolution (seconds, minutes, hours, days)
       var spec = {
         res: options.res,
         minTime: minTime,
-        maxTime: maxTime
+        maxTime: maxTime,
+        values: valuesArray
       }
       fs.writeFileSync(options.out+'/spec.json', JSON.stringify(spec))
       console.log('Min Time:', minTime)
@@ -160,9 +161,16 @@ module.exports = function (options) {
   }
 
   cublet.aggregate = function (coords, value, time) {
-    var date = new Date(time)    
+    var date = new Date(time).getTime()
+    //console.log("aggregate", [time, minTime, date, maxTime])
     minTime = (!minTime) ? date : Math.min(date, minTime)
     maxTime = (!maxTime) ? date : Math.max(date, maxTime)
+
+    // Build the enumeration
+    if(valuesArray[value] === undefined || valuesArray[value] === null) {
+      valuesArray[value] = 0;
+    }
+    valuesArray[value] += 1;
 
     tilePixel(coords[0], coords[1], levels[0], parseInt(levels[1])+1, function (err, pxAgg) {
       for (var z in pxAgg){
@@ -186,4 +194,3 @@ module.exports = function (options) {
 
   return cublet
 }
-
